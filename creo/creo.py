@@ -11,6 +11,37 @@ IC Physical Design group.
 """
 import functools
 
+import graph
+
+
+def NOP_FUNCTION():
+    pass
+
+def SUCCESS_FUNCTION():
+    return True
+
+class BuildFlow(graph.Graph):
+    def __init__(self):
+        super(BuildFlow, self).__init__()
+
+
+class Task(graph.Node):
+    """
+    Task represents a named node and function to representing the task.
+    The task can have dependancies and others can depend on the tasks output.
+    """
+    def __init__(self, name):
+        self.task_checks = [SUCCESS_FUNCTION,]
+        self.task_pre = [NOP_FUNCTION,]
+        self.task_function = [NOP_FUNCTION,]
+        self.task_post = [NOP_FUNCTION,]
+
+        assert(name)
+
+        super(Task, self).__init__(name)
+
+
+
 def follows1(func_name):
     """
     """

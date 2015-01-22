@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import os
 import unittest
 from creo import *
 
@@ -22,3 +22,11 @@ class TestDecorators(unittest.TestCase):
             ran_order.append('two')
 
         # self.assertEqual(ran_order, ['one', 'two'])
+
+
+
+def touch_or_create(filename):
+    if os.path.exists(filename):
+        os.utime(filename, None)
+    else:
+        file(filename, 'w')

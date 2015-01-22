@@ -1,0 +1,12 @@
+#
+# Creo Centralized Configuration System
+#
+# Description:
+#   This file contains the required python packages
+#   to run and test creo. This file is meant to be read by 'pip'
+#   % pip install -r requirements.txt
+
+nose
+mock
+coverage
+Django>=1.7.3

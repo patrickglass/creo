@@ -13,6 +13,9 @@ test_quick: chmod_quick
 	# Run a quick test suite with coverage enabled
 	nosetests -v --stop
 
+run:
+	cd server; python -Wall manage.py runserver 0.0.0.0:8083
+
 chmod:
 	# Set the correct permissions for all files
 	find . -type d -exec chmod 755 {} \;
