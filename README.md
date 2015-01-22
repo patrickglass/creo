@@ -13,3 +13,8 @@ Django Custom Setup:
 
 
     settings.AUTH_USER_MODEL also linked to for record keeping
+
+
+    add 'creo' to installed apps
+
+    ensure you have a base template named 'base.html'
