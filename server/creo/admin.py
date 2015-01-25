@@ -1,3 +1,6 @@
 from django.contrib import admin
+from creo.models import Field, Config, Entry
 
-# Register your models here.
+admin.site.register(Field)
+admin.site.register(Config)
+admin.site.register(Entry)
