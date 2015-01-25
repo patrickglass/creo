@@ -13,6 +13,10 @@ test_quick: chmod_quick
 	# Run a quick test suite with coverage enabled
 	nosetests -v --stop
 
+install:
+	pip install -r requirements.txt --upgrade
+	pip list -o
+
 run:
 	cd server; python -Wall manage.py runserver 0.0.0.0:8083
 

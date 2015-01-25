@@ -1,6 +1,6 @@
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from models import Comp
+from comp.models import Comp
 
 
 def index(request, active_only=False, chip_only=True):

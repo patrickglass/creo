@@ -10,3 +10,9 @@ class Comp(models.Model):
     is_active = models.BooleanField(default=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
+
+    def __str__ (self):
+        return self.name
+
+    def __repr__ (self):
+        return '<Comp %s (%s) %s>' % (self.name, self.alias, self.revision)
