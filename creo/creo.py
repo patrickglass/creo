@@ -9,95 +9,179 @@ Module pmcx
 This software is used for flow development and execution for the
 IC Physical Design group.
 """
+import os
+import logging
 import functools
-
+import weakref
 import graph
 
-
-def NOP_FUNCTION():
-    pass
-
-def SUCCESS_FUNCTION():
-    return True
-
-class BuildFlow(graph.Graph):
-    def __init__(self):
-        super(BuildFlow, self).__init__()
+from dependancy import Dependancy, FileSetDep
 
 
-class Task(graph.Node):
+class STATE(object):
+    ALWAYS, DEPEND, RUNNABLE, SUCCESS, FAILURE = range(5)
+
+class Task(object):
     """
     Task represents a named node and function to representing the task.
     The task can have dependancies and others can depend on the tasks output.
     """
-    def __init__(self, name):
-        self.task_checks = [SUCCESS_FUNCTION,]
-        self.task_pre = [NOP_FUNCTION,]
-        self.task_function = [NOP_FUNCTION,]
-        self.task_post = [NOP_FUNCTION,]
+    _instances = weakref.WeakSet()
 
-        assert(name)
+    def __init__(self, inputs=None, outputs=None,
+                 pre_target=None, post_target=None,
+                 *args):
 
-        super(Task, self).__init__(name)
+        self.name = None
+        self.description = None
 
+        self.inputs = set()
+        self.outputs = set()
 
+        # If there are no updates this task is immediately runnable
+        if inputs is None:
+            self.state = STATE.RUNNABLE
+        else:
+            self.state = STATE.DEPEND
+            if isinstance(inputs, (list, tuple)):
+                for i in inputs:
+                    self.set_inputs(i)
+            else:
+                self.set_inputs(inputs)
 
-def follows1(func_name):
-    """
-    """
-    def wrapper(f):
-        print "Inside wrapper()"
-        def wrapped_f(*args, **kwargs):
-            print "Inside wrapped_f()"
-            print "Decorator arguments:", func_name
-            f(*args, **kwargs)
-            print "After f(*args, **kwargs)"
-        return wrapped_f
-    return wrapper
+        # Set the output dependancys based on the input args
+        # if there are not output this target will always be run
+        if outputs is None:
+            self.state = STATE.ALWAYS
+        else:
+            if isinstance(outputs, (list, tuple)):
+                for o in outputs:
+                    self.set_outputs(o)
+            else:
+                self.set_outputs(outputs)
 
+        self.pre_target = None
+        self.target = None
+        self.post_target = None
+        print("TASK INIT")
+        # Add a weak refence to this instance
+        self._instances.add(self)
 
-class follows(object):
-
-    def __init__(self, function_name):
-        """
-        If there are decorator arguments, the function
-        to be decorated is not passed to the constructor!
-        """
-        print "Inside __init__()"
-        self.arg1 = function_name
-
-    def __call__(self, f):
+    def __call__(self, func):
         """
         If there are decorator arguments, __call__() is only called
         once, as part of the decoration process! You can only give
         it a single argument, which is the function object.
         """
-        print "Inside __call__()"
-        def wrapped_f(*args):
-            print "Inside wrapped_f()"
-            print "Decorator arguments:", self.arg1
-            f(*args)
-            print "After f(*args)"
-        functools.update_wrapper(self, f)
-        return wrapped_f
+        if func.__name__ in [t.name for t in Task.getinstances()]:
+            raise RuntimeError("@Task function %s must be unique" % func.__name__)
+        self.name = func.__name__
+        self.description = func.__doc__ or ""
+
+        self.target = func
+        functools.update_wrapper(self, func)
+        print("TASK CALL %s" % self.name)
+        return self
+
+    def __str__(self):
+        """Print out the Task object in a pretty format"""
+        return "TASK: %s %s" % (self.name, self.state)
+
+    def set_inputs(self, obj):
+        """Handles the inputs and create dependancies from them
+
+        Allowed inputs are function which must have been run successfully
+        Files if the input is a string
+        Or a list of either of the above
+        """
+        if isinstance(obj, Dependancy):
+            # ideal input arg is an actual dependancy object.
+            self.inputs.add(obj)
+        elif not isinstance(obj, basestring):
+            # if the input is of type string assume it is a file
+            self.inputs.add(FileSetDep(obj))
+        elif hasattr(obj, '__call__'):
+            # The function must be another task
+            # If so add all of its output as inputs on this task
+            if isinstance(obj, Task):
+                for i in obj.outputs:
+                    self.inputs.add(i)
+            else:
+                raise RuntimeError("input dependancy function must be references to another @Task decorated function!" + str(obj))
+        else:
+            raise TypeError("Input Dependancy is of the incorrect type!")
+
+    def set_outputs(self, obj):
+        # if the input is a string assume it is a file
+        if isinstance(obj, Dependancy):
+            self.inputs.add(obj)
+        elif not isinstance(obj, basestring):
+            self.inputs.add(FileSetDep(obj))
+        else:
+            raise TypeError("Input Dependancy is of the incorrect type!")
+
+    def check_rebuild(self):
+        """Checks the inputs vs the outputs to determine if this target
+        is required to be rebuilt.
+        Returns True if rebuild is required
+        returns False if target is up to date
+        """
+        for i in self.inputs:
+            for o in self.outputs:
+                if i >= o:
+                    # if the input is newer than the output rebuild.
+                    return True
+        return False
+
+    def check_dependancies(self):
+        # Check that the dependancies are all up to date
+        for dep in self.inputs:
+            if self.state != STATE.SUCCESS:
+                logging.info("Task ran Successfully!")
+            elif self.state == STATE.RUNNABLE:
+                logging.info("Task can be run. All Deps up to date!")
+            elif self.state == STATE.RUNNABLE:
+                logging.info("Task can be run. All Deps up to date!")
+        return True
+
+    def run(self):
+        # Run the precondition
+        if self.pre_target is not None:
+            self.pre_target()
+        # Run the main target
+        self.target()
+        # Run the post condition
+        if self.post_target is not None:
+            self.post_target()
 
 
-class decoratorWithoutArguments(object):
+    @classmethod
+    def getinstances(cls):
+        """This method is used to get all of the Task instances
 
-    def __init__(self, f):
+        we have used a weakref to allow Tasks to be deleted. Must now
+        handle the case when the ref has been gargbage collected.
         """
-        If there are no decorator arguments, the function
-        to be decorated is passed to the constructor.
-        """
-        print "Inside __init__()"
-        self.f = f
-        functools.update_wrapper(self, f)
+        return cls._instances
 
-    def __call__(self, *args):
-        """
-        The __call__ method is not called until the
-        decorated function is called.
-        """
-        print "Inside __call__()"
-        self.f(*args)
-        print "After self.f(*args)"
+    @classmethod
+    def run(cls, target=None):
+        print("Starting Build...")
+        print("Found %s targets!" % len(Task.getinstances()))
+        for task in Task.getinstances():
+            print(task)
+            # State machine for each build task
+            if task.state is STATE.DEPEND:
+                rebuild = task.check_rebuild()
+                if rebuild:
+                    # if the task has all
+                    task.state = STATE.RUNNABLE
+            elif task.state is STATE.ALWAYS or task.state == STATE.RUNNABLE:
+                try:
+                    task.run()
+                    task.state = STATE.SUCCESS
+                except Exception as e:
+                    logging.error("Task Exception: %s" % e)
+                    task.state = STATE.FAILURE
+            else:
+                task.state = STATE.DEPEND
