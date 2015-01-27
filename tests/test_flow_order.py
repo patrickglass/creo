@@ -3,7 +3,7 @@ import os
 import gc
 import unittest
 from creo import task
-from creo.dependancy import FileSetDep as File, ConfigDep as Config
+from creo.dependancy import FileSetDep as File
 
 def touch_or_create(filename):
     if os.path.exists(filename):

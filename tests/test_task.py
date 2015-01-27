@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gc
 import unittest
-from creo import Task
+from creo import task as Task
 
 class TestTaskInstanceCreate(unittest.TestCase):
 

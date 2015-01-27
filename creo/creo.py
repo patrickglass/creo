@@ -140,10 +140,10 @@ class Task(object):
         returns False if target is up to date
         """
         logging.debug("Checking Task Inputs and Outputs")
-        if outputs is None:
+        if self.outputs is None:
             logging.debug("Rebuild is always required since there are no outputs")
             return True
-        if inputs is None:
+        if self.inputs is None:
             for o in outputs:
                 # Rebuild if the output dependancy has no value
                 o._get_time_stamp()

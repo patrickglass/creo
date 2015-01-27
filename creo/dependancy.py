@@ -116,18 +116,3 @@ class FileSetDep(Dependancy):
             except os.error as e:
                 raise ValueError("File could not be accessed: '%s'" % str(path))
         return self.t_min, self.t_max
-
-
-class ConfigDep(Dependancy):
-    """
-    ConfigDep class
-
-    This class is used to check the modified timestamp on a set of config
-    entries so it can be compared to files
-    """
-    def _get_time_stamp(self):
-        """for the given files find the max and min time window"""
-        import time
-        self.t_min = time.time()
-        self.t_max = time.time()
-        return self.t_min, self.t_max

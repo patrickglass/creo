@@ -15,7 +15,7 @@ class TestDecorators(unittest.TestCase):
             ran_order.append('one')
             print ran_order
 
-        @Task(task1)
+        @task(task1)
         def task2(s):
             global ran_order
             print "task2"
