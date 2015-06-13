@@ -15,14 +15,13 @@ class TestDecorators(unittest.TestCase):
             ran_order.append('one')
             print ran_order
 
-        @follows('one')
-        def task2():
+        @task(task1)
+        def task2(s):
             global ran_order
             print "task2"
             ran_order.append('two')
 
-        # self.assertEqual(ran_order, ['one', 'two'])
-
+        self.assertEqual(ran_order, ['one', 'two'])
 
 
 def touch_or_create(filename):

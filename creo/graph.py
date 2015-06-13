@@ -54,7 +54,7 @@ class Graph:
         end, created = self.get_or_create(end_node)
         start.outputs[end.name] = end
         end.inputs[start.name] = start
-        
+
 
     def get(self, name):
         return self.nodes[name]

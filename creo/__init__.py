@@ -4,4 +4,5 @@
 :Copyright: Copyright 2014 SwissTech Consulting
 """
 
-from .creo import *
+from .creo import task
+from .dependancy import Dependancy, FileSetDep
