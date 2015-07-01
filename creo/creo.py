@@ -9,17 +9,19 @@ Module pmcx
 This software is used for flow development and execution for the
 IC Physical Design group.
 """
-import os
 import logging
 import functools
 import weakref
-import graph
 
 from dependancy import Dependancy, FileSetDep
 
 
+logger = logging.getLogger(__name__)
+
+
 class STATE(object):
-    ALWAYS, DEPEND, RUNNABLE, SUCCESS, FAILURE = range(5)
+    DISABLED, ALWAYS, DEPEND, RUNNABLE, RUNNING, SUCCESS, FAILURE = range(7)
+
 
 class Task(object):
     """
@@ -31,7 +33,7 @@ class Task(object):
     def __init__(self, inputs=None, outputs=None,
                  pre_target=None, post_target=None,
                  *args):
-
+        # logger.info("TASK: inputs=%s, outputs=%s", inputs, outputs)
         # There variables are set in the call method
         self.name = None
         self.description = None
@@ -48,16 +50,16 @@ class Task(object):
         if inputs is None and outputs:
             # No inputs indicates we can run right away
             self.state = STATE.RUNNABLE
-            logging.debug("State: Run on first chance")
+            logger.debug("State: Run on first chance")
         elif inputs is None and outputs is None:
             # If we have no inputs or outputs always run
             self.state = STATE.ALWAYS
-            logging.debug("State: Always run")
+            logger.debug("State: Always run")
         else:
             # In depend state we wait for dependancys to be
             # in success state before we are allowed to check or proceed.
             self.state = STATE.DEPEND
-            logging.debug("State: Run once dependencies succeeed")
+            logger.debug("State: Run once dependencies succeeed")
 
         # Accept either dependancy or list of dependencies
         # convert the objects into dependancy objects
@@ -93,7 +95,11 @@ class Task(object):
 
         self.target = func
         functools.update_wrapper(self, func)
-        logging.info("Created Task: %s" % self.name)
+        logger.info("Created Task: %s" % self.name)
+        logger.info("TASK: %s, inputs=%s, outputs=%s",
+                    self.name,
+                    self.inputs,
+                    self.outputs)
         return self
 
     def __str__(self):
@@ -120,7 +126,9 @@ class Task(object):
                 for i in obj.outputs:
                     self.inputs.add(i)
             else:
-                raise RuntimeError("input dependancy function must be references to another @Task decorated function!" + str(obj))
+                raise RuntimeError(
+                    "input dependancy function must be references to another "
+                    "@Task decorated function!" + str(obj))
         else:
             raise TypeError("Input Dependancy is of the incorrect type!")
 
@@ -139,21 +147,21 @@ class Task(object):
         Returns True if rebuild is required
         returns False if target is up to date
         """
-        logging.debug("Checking Task Inputs and Outputs")
+        logger.debug("Checking Task Inputs and Outputs")
         if self.outputs is None:
-            logging.debug("Rebuild is always required since there are no outputs")
+            logger.debug("Rebuild is always required since there are no outputs")
             return True
         if self.inputs is None:
             for o in outputs:
                 # Rebuild if the output dependancy has no value
                 o._get_time_stamp()
                 if not o.t_max or not o.t_min:
-                    logging.debug("Rebuild required since output not valid. %s" % o)
+                    logger.debug("Rebuild required since output not valid. %s" % o)
                     return True
 
         for i in self.inputs:
             for o in self.outputs:
-                logging.debug("%s >= %s: %s" % (i, o, bool(i >= o)))
+                logger.debug("%s >= %s: %s" % (i, o, bool(i >= o)))
                 if i >= o:
                     # if the input is newer than the output rebuild.
                     return True
@@ -169,7 +177,6 @@ class Task(object):
         if self.post_target is not None:
             self.post_target()
 
-
     @classmethod
     def getinstances(cls):
         """This method is used to get all of the Task instances
@@ -181,10 +188,10 @@ class Task(object):
 
     @classmethod
     def run(cls, target=None):
-        logging.info("Starting Build Run...")
-        logging.info("Found %s targets!" % len(Task.getinstances()))
+        logger.info("Starting Build Run...")
+        logger.info("Found %s targets!" % len(Task.getinstances()))
         for task in Task.getinstances():
-            logging.debug(task)
+            logger.debug(task)
             # State machine for each build task
             if task.state is STATE.DEPEND:
                 rebuild = task.check_rebuild()
@@ -196,7 +203,7 @@ class Task(object):
                     task.execute()
                     task.state = STATE.SUCCESS
                 except Exception as e:
-                    logging.fatal("Task Exception: %s" % e)
+                    logger.fatal("Task Exception: %s" % e)
                     task.state = STATE.FAILURE
                     raise
             else:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Module task
+Module reference
 
 :Company: SwissTech Consulting
 :Author: Patrick Glass <patrickglass@swisstech.ca>
@@ -10,20 +10,16 @@ This software is used for flow development and execution of pipelines
 """
 import os
 import logging
-import weakref
-import warnings
 import functools
 
-
 from .packages import creoconfig
-from .memento import MementoMetaclass
 
 
 logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
-class Target(object):
+class Reference(object):
 
     def exists(self):
         raise NotImplementedError()
@@ -50,7 +46,7 @@ class Target(object):
         return (self.last_modified() < other.last_modified())
 
 
-class LocalDirectory(Target):
+class LocalDirectory(Reference):
 
     def __init__(self, path):
         self.path = path
@@ -93,7 +89,7 @@ SETTINGS_FILE = 'creo_build.xml'
 env = creoconfig.Config(SETTINGS_FILE)
 
 
-class ConfigTarget(Target):
+class ConfigEntry(Reference):
 
     def __init__(self, key, config=env):
         self.config = config

@@ -2,9 +2,9 @@
 """
 Module fileset
 
-:Company: PMC-Sierra Inc.
-:Author: Patrick Glass <patrick.glass@pmcs.com>
-:Copyright: Copyright 2014 PMC-Sierra, Inc.
+:Company: SwissTech Consulting
+:Author: Patrick Glass <patrickglass@swisstech.ca>
+:Copyright: Copyright 2015 SwissTech Consulting
 
 This class is used to create a handle to a group of files and enable
 extracting and comparing timestamps.
@@ -101,8 +101,9 @@ class FileSetDep(Dependancy):
                 raise ValueError("Argument must be string pathnames! %s" % arg)
 
         if not self.paths:
-            raise ValueError("Glob pattern did not match any files %s" % str(self.args))
             self.t_max = self.t_min = None
+            return None
+            # raise ValueError("Glob pattern did not match any files %s" % str(self.args))
 
         for path in self.paths:
             try:
@@ -113,6 +114,6 @@ class FileSetDep(Dependancy):
                     self.t_max = t
                 elif t < self.t_min:
                     self.t_min = t
-            except os.error as e:
+            except os.error:
                 raise ValueError("File could not be accessed: '%s'" % str(path))
         return self.t_min, self.t_max

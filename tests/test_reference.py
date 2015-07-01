@@ -1,38 +1,36 @@
 #!/usr/bin/env python
-import gc
 import mock
 import unittest
 
-from creo.target import Target
-from creo import LocalDirectory, LocalFile
+from creo import Reference
 
 
-class TargetTestCase(unittest.TestCase):
+class ReferenceTestCase(unittest.TestCase):
 
     def test_init(self):
-        t = Target()
+        Reference()
 
     def test_exists(self):
-        t = Target()
+        t = Reference()
         self.assertRaises(NotImplementedError, t.exists)
 
     def test_last_modified(self):
-        t = Target()
+        t = Reference()
         self.assertRaises(NotImplementedError, t.last_modified)
 
     def test_repr(self):
-        t = Target()
-        self.assertEqual(repr(t), "Target({})")
+        t = Reference()
+        self.assertEqual(repr(t), "Reference({})")
 
 
-class TargetLastModfifiedTestCase(unittest.TestCase):
+class ReferenceLastModfifiedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.t1 = Target()
+        self.t1 = Reference()
         self.t1.last_modified = mock.MagicMock()
         self.t1.last_modified.return_value = 0
 
-        self.t2 = Target()
+        self.t2 = Reference()
         self.t2.last_modified = mock.MagicMock()
         self.t2.last_modified.return_value = 0
 

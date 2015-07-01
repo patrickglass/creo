@@ -6,6 +6,11 @@ Implements a directed acyclic graph (DAG) which will throw an error
 when a circular dependancy is created. A topological sort is used to determine
 what nodes can be run first.
 """
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 class Node:
     def __init__(self, name):
@@ -55,7 +60,6 @@ class Graph:
         start.outputs[end.name] = end
         end.inputs[start.name] = start
 
-
     def get(self, name):
         return self.nodes[name]
         # if name in self.nodes:
@@ -75,4 +79,3 @@ class Graph:
     def list(self):
         """returns an toplogical sorted list of elements"""
         return self.nodes
-

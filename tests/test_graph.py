@@ -3,6 +3,7 @@
 import unittest
 from creo.graph import Graph, Node
 
+
 class TestNodes(unittest.TestCase):
 
     def test_node_init_name(self):
@@ -113,7 +114,7 @@ class TestGraphScenario2(unittest.TestCase):
         self.g.add('2')
         self.g.add('3', inputs=['0', '2'], output='4')
         self.g.add('4', input='0', output='7')
-        self.g.add('5', inputs=['3',], output='7')
+        self.g.add('5', inputs=['3'], output='7')
         self.g.add('6', input='3', outputs=['5', '7'])
         self.g.add('7', inputs=['4', '6'])
         print "setup complete."

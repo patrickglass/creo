@@ -1,45 +1,82 @@
 #!/usr/bin/env python
-import os
-import gc
+import time
 import unittest
-from creo import task
-from creo.dependancy import FileSetDep as File
+import logging
 
-def touch_or_create(filename):
-    if os.path.exists(filename):
-        os.utime(filename, None)
-    else:
-        file(filename, 'w')
+import creo
+from creo import LocalFile
+
 
 class TestTaskBuildFlow(unittest.TestCase):
 
     def test_build_1(self):
-        @task(inputs=None, outputs=File("step1.txt"))
-        def step1():
-            touch_or_create("step1.txt")
 
-        @task(inputs=File("step1.txt"), outputs=File("step2_1.txt"))
-        def step2_1():
-            touch_or_create("step2_1.txt")
+        class TouchTask(creo.Task):
+            def run(self):
+                for f in self.outputs():
+                    f.touch()
+                    time.sleep(0.1)
+                return True
 
-        @task(inputs=step1, outputs=File("step2_2.txt"))
-        def step2_2():
-            touch_or_create("step2_2.txt")
+        class Step1(TouchTask):
+            def outputs(self):
+                return [LocalFile("step1.txt")]
 
-        @task(inputs=[step2_2, step2_1], outputs=File("step3.txt"))
-        def step3():
-            touch_or_create("step3.txt")
+        class Step2_1(TouchTask):
+            def inputs(self):
+                return [Step1()]
 
-        @task(inputs=[File("step3.txt"), File("step2_2.txt")], outputs=[File("step4_1.txt"), File("step4_2.txt")])
-        def step4():
-            touch_or_create("step4_1.txt")
-            touch_or_create("step4_2.txt")
+            def outputs(self):
+                return [LocalFile("step2_1.txt")]
 
-        # Print the tasks
-        for t in task.getinstances():
-            print t
+        class Step2_2(TouchTask):
+            def inputs(self):
+                return [Step1()]
+
+            def outputs(self):
+                return [LocalFile("step2_2.txt")]
+
+        class Step3(TouchTask):
+            def inputs(self):
+                return [Step2_1(), Step2_2()]
+
+            def outputs(self):
+                return [LocalFile("step3.txt")]
+
+        class Step4(TouchTask):
+            def inputs(self):
+                return [Step3(), Step2_2()]
+
+            def outputs(self):
+                return [LocalFile("step4_1.txt"), LocalFile("step4_2.txt")]
+
+        runner = creo.TaskManager(creo.Task)
 
         # Run all the tasks
-        task.run()
+        logging.info('*'*79)
+        runner.run(Step4)
 
-        self.assertTrue(False)
+        # Update the first task and ensure other tasks invalidated
+        logging.info('*'*79)
+        LocalFile("mark.txt").touch()
+        time.sleep(0.1)
+        LocalFile("step1.txt").touch()
+        runner.run(Step4)
+        # Check that the files were updates as expected
+        self.assertTrue(LocalFile("mark.txt") < LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
+
+        logging.info('*'*79)
+        LocalFile("mark.txt").touch()
+        time.sleep(0.1)
+        LocalFile("step3.txt").touch()
+        runner.run(Step4)
+        # Check that the files were updates as expected
+        self.assertTrue(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("mark.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
+
+        logging.info('*'*79)
+        LocalFile("mark.txt").touch()
+        time.sleep(0.1)
+        LocalFile("step2_2.txt").touch()
+        runner.run(Step4)
+        # Check that the files were updates as expected
+        self.assertTrue(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("mark.txt") < LocalFile("step2_2.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
