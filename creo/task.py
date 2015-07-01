@@ -60,12 +60,12 @@ class Task(object):
         raise NotImplementedError()
 
     def inputs(self):
-        """Returns a generator for all list of all direct input targets. This
-        will not include sub-dependant input targets
+        """Returns a generator for all list of all direct input references. This
+        will not include sub-dependant input references
         """
         for task in self.depends():
-            for target in task.outputs():
-                yield target
+            for ref in task.outputs():
+                yield ref
 
     def complete(self):
         """
@@ -85,13 +85,13 @@ class Task(object):
         # If there are no inputs or simple compare is selected we will just
         # ensure that the outputs exists.
         if self.use_simple_compare or len(inputs) == 0:
-            return all([target.exists() for target in outputs])
+            return all([ref.exists() for ref in outputs])
         else:
             try:
                 logger.debug("Task %r inputs: %s", self, inputs)
-                max_in = max([target.last_modified() for target in inputs])
+                max_in = max([ref.last_modified() for ref in inputs])
                 logger.debug("Task %r inputs last modified: %s", self, max_in)
-                min_out = min([target.last_modified() for target in outputs])
+                min_out = min([ref.last_modified() for ref in outputs])
                 logger.debug("Task %r outputs last modified: %s", self, min_out)
                 # Task is complete if all inputs are older than outputs
                 is_complete = max_in < min_out

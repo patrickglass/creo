@@ -18,7 +18,7 @@ if pkg_folder not in sys.path:
 
 from .task import Task
 from .task_manager import TaskManager
-from .reference import LocalFile, LocalDirectory, ConfigEntry, env
+from .reference import Reference, LocalFile, LocalDirectory, ConfigEntry, env
 
 
 def process_cmd(command):
