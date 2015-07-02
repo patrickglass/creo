@@ -8,7 +8,6 @@ Module test_fileset
 
 UnitTest framework for validating the PMCX system
 """
-import sys
 import os
 import re
 import time

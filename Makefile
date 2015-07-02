@@ -31,6 +31,6 @@ chmod_quick:
 clean: chmod
 	# Delete any generated files
 	@find . -name "*.py?" | xargs rm -f
-	@rm -rf tmp_*
+	@rm -rf tmp_* step*.txt mark.txt
 
 .PHONY: coverage test test_quick chmod chmod_quick clean

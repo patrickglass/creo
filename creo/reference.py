@@ -57,7 +57,7 @@ class LocalDirectory(Reference):
     def last_modified(self):
         if self.exists():
             last_mod = os.stat(self.path).st_mtime
-            logger.debug("%s was modified %f.", self.path, last_mod)
+            # logger.debug("%s was modified %f.", self.path, last_mod)
             return last_mod
         logger.error("Cannot get timestamp for missing file %s", self.path)
         raise IOError("file '%s' does not exist! Cannot get modified time."
@@ -72,7 +72,7 @@ class LocalFile(LocalDirectory):
     def last_modified(self):
         if self.exists():
             last_mod = os.path.getmtime(self.path)
-            logger.debug("%s was modified %f.", self.path, last_mod)
+            # logger.debug("%s was modified %f.", self.path, last_mod)
             return last_mod
         logger.error("Cannot get timestamp for missing file %s", self.path)
         raise IOError("file '%s' does not exist! Cannot get modified time."
