@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import time
+import mock
 import unittest
 import logging
 
@@ -43,10 +44,9 @@ if sys.platform == 'darwin':
 LocalFile = creo.LocalFile
 
 
-class TestTaskBuildFlow(unittest.TestCase):
+class TestTaskBuildFlowFile1(unittest.TestCase):
 
-    def test_build_1(self):
-
+    def setUp(self):
         class TouchTask(creo.Task):
             def run(self):
                 for f in self.outputs():
@@ -86,26 +86,47 @@ class TestTaskBuildFlow(unittest.TestCase):
             def outputs(self):
                 return [LocalFile("step4_1.txt"), LocalFile("step4_2.txt")]
 
-        target_task = Step4()
+        self.default_cls = Step4
+
+    def test_status(self):
+        import creo.task_manager
+
+        with mock.patch('creo.task_manager.logger') as m:
+            runner = creo.TaskManager()
+            runner.status()
+
+        m.info.assert_has_calls(
+            [
+                mock.call("Task: 'Step1' is up to date!\n"),
+                mock.call("Task: 'Step2_1' is up to date!\n"),
+                mock.call("Task: 'Step2_2' is up to date!\n"),
+                mock.call("Task: 'Step3' is up to date!\n"),
+                mock.call("Task: 'Step4' is up to date!\n"),
+            ], any_order=True
+        )
+
+    def test_build(self):
 
         runner = creo.TaskManager()
-        runner.add(target_task)
 
-        # Run all the tasks
-        # logging.info('*'*79)
-        # runner.run()
+        logging.info('*'*79)
+        logging.info("Printing out Pipeline Status.")
+        runner.status()
 
         # Update the first task and ensure other tasks invalidated
         logging.info('*'*79)
+        logging.info("Running Pipeline. Touching mark.txt and step1.txt")
+
         m = LocalFile("mark.txt")
         m.touch()
         time.sleep(DELAY)
         f = LocalFile("step1.txt")
         f.touch()
         time.sleep(DELAY)
-        runner.run()
+        runner.run(self.default_cls)
         # Check that the files were updates as expected
 
+        print "\nPrinting out refenence file timestamps..."
         print LocalFile("mark.txt")
         print LocalFile("step1.txt")
         print LocalFile("step2_1.txt")
@@ -117,23 +138,25 @@ class TestTaskBuildFlow(unittest.TestCase):
         self.assertTrue(LocalFile("mark.txt") < LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
 
         logging.info('*'*79)
+        logging.info("Running Pipeline. Touching mark.txt and step3.txt")
         m = LocalFile("mark.txt")
         m.touch()
         time.sleep(DELAY)
         f = LocalFile("step3.txt")
         f.touch()
         time.sleep(DELAY)
-        runner.run()
+        runner.run('Step4')
         # Check that the files were updates as expected
         self.assertTrue(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("mark.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
 
         logging.info('*'*79)
+        logging.info("Running Pipeline. Touching mark.txt and step2_2.txt")
         m = LocalFile("mark.txt")
         m.touch()
         time.sleep(DELAY)
         f = LocalFile("step2_2.txt")
         f.touch()
         time.sleep(DELAY)
-        runner.run()
+        runner.run(self.default_cls())
         # Check that the files were updates as expected
         self.assertTrue(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("mark.txt") < LocalFile("step2_2.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))

@@ -64,20 +64,28 @@ class Step4(TouchTask):
 target_task = Step4()
 
 runner = creo.TaskManager()
-runner.add(target_task)
+# runner.add(target_task)
 
 # Run all the tasks
-# logging.info('*'*79)
-# runner.run()
+logging.info('*'*79)
+logging.info("Running Pipeline to get to a known state!")
+runner.run(target_task)
+
+logging.info('*'*79)
+logging.info("Printing out Pipeline Status.")
+runner.status()
 
 # Update the first task and ensure other tasks invalidated
 logging.info('*'*79)
+logging.info("Running Pipeline. Touching mark.txt and step1.txt")
+
 LocalFile("mark.txt").touch()
 time.sleep(DELAY)
 LocalFile("step1.txt").touch()
 time.sleep(DELAY)
-runner.run()
+runner.run(target_task)
 
+print "\nPrinting out refenence file timestamps..."
 print LocalFile("mark.txt").to_string(True)
 print LocalFile("step1.txt").to_string(True)
 print LocalFile("step2_1.txt").to_string(True)
@@ -90,12 +98,14 @@ print LocalFile("step4_2.txt").to_string(True)
 assert(LocalFile("mark.txt") < LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
 
 logging.info('*'*79)
+logging.info("Running Pipeline. Touching mark.txt and step3.txt")
 LocalFile("mark.txt").touch()
 time.sleep(DELAY)
 LocalFile("step3.txt").touch()
 time.sleep(DELAY)
-runner.run()
+runner.run(target_task)
 
+print "\nPrinting out refenence file timestamps..."
 print LocalFile("mark.txt").to_string(True)
 print LocalFile("step1.txt").to_string(True)
 print LocalFile("step2_1.txt").to_string(True)
@@ -108,12 +118,14 @@ print LocalFile("step4_2.txt").to_string(True)
 assert(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("step2_2.txt") < LocalFile("mark.txt") < LocalFile("step3.txt") < LocalFile("step4_1.txt") < LocalFile("step4_2.txt"))
 
 logging.info('*'*79)
+logging.info("Running Pipeline. Touching mark.txt and step2_2.txt")
 LocalFile("mark.txt").touch()
 time.sleep(DELAY)
 LocalFile("step2_2.txt").touch()
 time.sleep(DELAY)
-runner.run()
+runner.run(target_task)
 
+print "\nPrinting out refenence file timestamps..."
 print LocalFile("mark.txt")
 print LocalFile("step1.txt")
 print LocalFile("step2_1.txt")
@@ -127,10 +139,12 @@ assert(LocalFile("step1.txt") < LocalFile("step2_1.txt") < LocalFile("mark.txt")
 
 logging.info('*'*79)
 logging.info('*'*79)
+logging.info("Printing out Pipeline Status.")
 runner.status()
 
 logging.info('*'*79)
 logging.info('*'*79)
+logging.info("Printing out Pipeline Status. Touching mark.txt and step2_2.txt")
 LocalFile("mark.txt").touch()
 time.sleep(DELAY)
 LocalFile("step2_2.txt").touch()

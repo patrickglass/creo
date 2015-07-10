@@ -67,3 +67,6 @@ class TaskRegisterMemento(type):
     @property
     def instances(self):
         return self.instance_cache
+
+    def class_by_name(self, task_class_name):
+        return self.class_register[task_class_name]

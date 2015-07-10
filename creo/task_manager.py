@@ -9,10 +9,13 @@ Module task
 This software is used for flow development and execution of pipelines
 """
 import logging
+import warnings
 import threading
 import multiprocessing
+import types
 
 
+from task import Task
 from .task_state import PENDING, CHECK, RUNABLE, RUNNING, SUCCESS, FAILED, DISABLED
 
 
@@ -45,23 +48,52 @@ class ThreadWorker(threading.Thread):
 
 class TaskManager(object):
 
-    def __init__(self, worker_type=Worker):
-        self.targets = []
+    def __init__(self, task_base=Task, worker_type=Worker):
+        self.base_class = task_base
         self.worker_type = worker_type
         self.worker_results = {}
 
-    def add(self, target):
-        logger.debug("Adding target %s to pool." % target)
-        self.targets.append(target)
+    def _target_to_instance(self, target):
+        # We allow class names to be specified as a string
+        # Find the actual class from the string
+        if isinstance(target, basestring):
+            target = self.base_class.class_by_name(target)
 
-    def status(self):
-        for target in self.targets:
-            for task in TaskManager.all_deps(target):
-                # self.update_state(task)
-                logger.info(task)
+        # Check whether the value is a class or instance
+        # we want to return only instances
+        if isinstance(target, (type, types.ClassType)):
+            return target()
+        else:
+            return target
 
-    def clean(self, level=0):
-        pass
+    def _get_tasks(self, target):
+        """
+        if target is passed in get only related tasks
+        otherwise get all defined task instances
+        """
+        if target:
+            return TaskManager.all_deps(self._target_to_instance(target))
+        else:
+            return self.base_class.instances.values()
+
+    # def add(self, target):
+    #     logger.debug("Adding target %s to pool." % target)
+    #     warnings.warn(
+    #         "'add' is deprecated. All calls should change to passing target to status, run, clean, and force!",
+    #         DeprecationWarning
+    #     )
+    #     self.targets.append(target)
+
+    def status(self, target=None):
+        tasks = self._get_tasks(target)
+        for task in tasks:
+            logger.info(task.status())
+
+    def clean(self, level=0, target=None):
+        tasks = self._get_tasks(target)
+
+    def force(self, target=None):
+        tasks = self._get_tasks(target)
 
     def run_new_state(self):
         for target in self.targets:
@@ -128,18 +160,19 @@ class TaskManager(object):
             # logger.debug("Yield Main incomplete Task: %s", task)
             yield task
 
-    def run(self):
-        for target in self.targets:
-            for task in TaskManager.flatten_incomplete_tasks(target):
-                logger.info("Running Task: \n%s", task.name)
-                worker = self.worker_type(target=task.run, name=task.name)
-                worker.join()
-                ret_code = worker.run()
-                if ret_code and task.complete():
-                    logger.info("Task '%s' Completed", task.name)
-                    task.state = SUCCESS
-                else:
-                    logger.error("*** Task '%s' FAILED", task.name)
-                    print(task)
-                    task.state = FAILED
-                    raise RuntimeError("exiting build flow since step failed!")
+    def run(self, target=None):
+        target = self._target_to_instance(target)
+
+        for task in TaskManager.flatten_incomplete_tasks(target):
+            logger.info("Running Task: %s", task.name)
+            worker = self.worker_type(target=task.run, name=task.name)
+            worker.join()
+            ret_code = worker.run()
+            if ret_code and task.complete():
+                logger.info("\t\t'%s' Completed", task.name)
+                task.state = SUCCESS
+            else:
+                logger.error("*** '%s' FAILED", task.name)
+                print(task)
+                task.state = FAILED
+                raise RuntimeError("exiting build flow since step failed!")

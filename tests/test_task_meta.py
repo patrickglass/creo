@@ -122,3 +122,15 @@ class TaskTestCase(unittest.TestCase):
         print BaseObj.classes
         self.assertEqual(len(BaseObj.classes), 6)
         self.assertEqual(len(BaseObj.instances), 5)
+
+    def test_class_by_name(self):
+        class BaseObj(object):
+            __metaclass__ = TaskRegisterMemento
+
+        class SubObj1(BaseObj):
+            pass
+
+        class SubObj3(BaseObj):
+            pass
+
+        self.assertEqual(SubObj1.class_by_name('SubObj1').__name__, 'SubObj1')

@@ -126,21 +126,7 @@ class Task(object):
                 # or the Config entry did not exist and so we also have to run.
                 return False
 
-    @classmethod
-    def get_instances(cls):
-        """This method is used to get all of the Task instances
-
-        we have used a weakref to allow Tasks to be deleted. Must now
-        handle the case when the ref has been gargbage collected.
-        """
-        warnings.warn("This method is deprecated. Please use Task.instances",
-                      DeprecationWarning)
-        return cls.instances
-
-    def __repr__(self):
-        return "%s(%r)" % (self.name, self.__dict__)
-
-    def __str__(self):
+    def status(self):
         """Print out the Task object in a pretty format"""
         s = "Task: '%s'" % self.name
         is_complete = self.complete()
@@ -155,3 +141,10 @@ class Task(object):
         else:
             s += " is up to date!\n"
         return s
+
+    def __repr__(self):
+        return "%s(%r)" % (self.name, self.__dict__)
+
+    def __str__(self):
+        """Print out the Task object in a pretty format"""
+        return self.status()

@@ -7,7 +7,7 @@ coverage: chmod_quick
 
 test: chmod_quick
 	# Run the test suite
-	nosetests
+	PYTHONWARNINGS=error nosetests
 
 test_quick: chmod_quick
 	# Run a quick test suite with coverage enabled
@@ -30,7 +30,8 @@ chmod_quick:
 
 clean: chmod
 	# Delete any generated files
+	@rm -rf tmp_* step*.txt mark.txt .coverage
 	@find . -name "*.py?" | xargs rm -f
-	@rm -rf tmp_* step*.txt mark.txt
+
 
 .PHONY: coverage test test_quick chmod chmod_quick clean
