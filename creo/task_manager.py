@@ -9,41 +9,137 @@ Module task
 This software is used for flow development and execution of pipelines
 """
 import logging
+import threading
+import multiprocessing
+
+
+from .task_state import PENDING, CHECK, RUNABLE, RUNNING, SUCCESS, FAILED, DISABLED
 
 
 logger = logging.getLogger(__name__)
 
 
-class TaskManager(object):
+class Worker(object):
 
-    def __init__(self):
-        # if not isinstance(task_class, Task):
-        #     raise TypeError('task_class must be of type creo.Task!')
-        # self.tasks = task_class.instances
+    def __init__(self, group=None, target=None, name=None, *args, **kwargs):
+        self.group = group
+        self.target = target
+        self.name = name
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        return self.target(*self.args, **self.kwargs)
+
+    def join(self):
         pass
 
-    def status(self, target=None):
-        # for task in self.tasks:
-        #     logger.info(task)
-        for task in TaskManager.flatten_incomplete_tasks(target):
-            logger.info("\tTask: %s", task)
+
+class ProcessWorker(multiprocessing.Process):
+    pass
+
+
+class ThreadWorker(threading.Thread):
+    pass
+
+
+class TaskManager(object):
+
+    def __init__(self, worker_type=Worker):
+        self.targets = []
+        self.worker_type = worker_type
+        self.worker_results = {}
+
+    def add(self, target):
+        logger.debug("Adding target %s to pool." % target)
+        self.targets.append(target)
+
+    def status(self):
+        for target in self.targets:
+            for task in TaskManager.all_deps(target):
+                # self.update_state(task)
+                logger.info(task)
+
+    def clean(self, level=0):
+        pass
+
+    def run_new_state(self):
+        for target in self.targets:
+            for task in TaskManager.all_deps(target):
+                self.update_state(task)
+
+    def update_state(self, task):
+        if task.state == PENDING:
+            if len(task.inputs()) == 0:
+                task.state = CHECK
+            elif all([t.state for t in task.inputs() if t.state != SUCCESS]):
+                task.state = CHECK
+
+            if task.state == CHECK:
+                if task.complete():
+                    task.state == SUCCESS
+                else:
+                    task.state == RUNABLE
+        elif task.state == RUNNING:
+            # Check with the results dict if this task has results posted
+            if task.name in self.worker_results:
+                result = self.worker_results[task.name]
+                is_complete = task.complete()
+                if not result:
+                    logging.error(
+                        "%s failed with return code: %s",
+                        task.name, result)
+                    task.state == FAILED
+                elif not is_complete():
+                    logging.fatal(
+                        "%s failed complete() task check. This should "
+                        "never occur since the task should be able to "
+                        "determine success without relying on job return "
+                        "code. Please report this error!",
+                        task.name)
+                    task.state == FAILED
+                    raise RuntimeError()
+                else:
+                    logging.debug(
+                        "%s completed successfully!", task.name)
+                    task.state == SUCCESS
+            # Final states are SUCCESS, FAILED, DISABLED. Do Nothing
+            # for state RUNABLE external process will queue the run and
+            # change it status once completed.
+
+    @staticmethod
+    def all_deps(task):
+        # logger.debug("Flatten Task: %s", task)
+        for dependent in task.depends():
+            # logger.debug("Flatten SubTask: %s", dependent)
+            for subtask in TaskManager.all_deps(dependent):
+                yield subtask
+        # logger.debug("Yield Main incomplete Task: %s", task)
+        yield task
 
     @staticmethod
     def flatten_incomplete_tasks(task):
         # logger.debug("Flatten Task: %s", task)
-        for dependant in task.depends():
-            # logger.debug("Flatten SubTask: %s", dependant)
-            for subtask in TaskManager.flatten_incomplete_tasks(dependant):
+        for dependent in task.depends():
+            # logger.debug("Flatten SubTask: %s", dependent)
+            for subtask in TaskManager.flatten_incomplete_tasks(dependent):
                 yield subtask
-        if not task.complete():
+        if not task.state == DISABLED and not task.complete():
             # logger.debug("Yield Main incomplete Task: %s", task)
             yield task
 
-    def run(self, target=None):
-        for task in TaskManager.flatten_incomplete_tasks(target):
-            logger.info("Running Task: %s", task)
-            ret_code = task.run()
-            if ret_code:
-                logger.info("Task %s Completed", task)
-            else:
-                logger.error("*** Task %s FAILED", task)
+    def run(self):
+        for target in self.targets:
+            for task in TaskManager.flatten_incomplete_tasks(target):
+                logger.info("Running Task: \n%s", task.name)
+                worker = self.worker_type(target=task.run, name=task.name)
+                worker.join()
+                ret_code = worker.run()
+                if ret_code and task.complete():
+                    logger.info("Task '%s' Completed", task.name)
+                    task.state = SUCCESS
+                else:
+                    logger.error("*** Task '%s' FAILED", task.name)
+                    print(task)
+                    task.state = FAILED
+                    raise RuntimeError("exiting build flow since step failed!")

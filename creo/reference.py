@@ -11,6 +11,7 @@ This software is used for flow development and execution of pipelines
 import os
 import logging
 import functools
+import datetime
 
 from .packages import creoconfig
 
@@ -48,41 +49,67 @@ class Reference(object):
 
 class LocalDirectory(Reference):
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, path, create=False):
+        self.file = path
+        self.directory = os.path.realpath(path)
+        if create:
+            self.mkdir()
+
+    def mkdir(self):
+        if not os.path.exists(self.directory):
+            logger.debug(
+                "Making dir '%s' for file '%s'", self.directory, self.file)
+            os.makedirs(self.directory)
 
     def exists(self):
-        return os.path.exists(self.path)
+        return os.path.exists(self.file)
 
     def last_modified(self):
         if self.exists():
-            last_mod = os.stat(self.path).st_mtime
-            # logger.debug("%s was modified %f.", self.path, last_mod)
+            last_mod = os.stat(self.file).st_mtime
+            # logger.debug("%s was modified %f.", self.file, last_mod)
             return last_mod
-        logger.error("Cannot get timestamp for missing file %s", self.path)
         raise IOError("file '%s' does not exist! Cannot get modified time."
-                      % self.path)
+                      % self.file)
+
+    def to_string(self, compact=True):
+        try:
+            ts = datetime.datetime.fromtimestamp(self.last_modified())
+            time_str = ts.strftime('%Y-%m-%d %H:%M:%S.%f')
+        except IOError:
+            time_str = "<-- MISSING"
+        if compact:
+            fmt = "%s: %-35s\t%s"
+        else:
+            fmt = "%s: %s\n\tModified: %s"
+        return fmt % (self.__class__.__name__, self.file, time_str)
+
+    def __str__(self):
+        return self.file
 
 
 class LocalFile(LocalDirectory):
 
-    def __init__(self, filename):
-        self.path = filename
+    def __init__(self, filename, create=True):
+        self.file = filename
+        self.directory = os.path.dirname(os.path.realpath(filename))
+        if create:
+            self.mkdir()
 
     def last_modified(self):
         if self.exists():
-            last_mod = os.path.getmtime(self.path)
-            # logger.debug("%s was modified %f.", self.path, last_mod)
+            last_mod = os.path.getmtime(self.file)
+            # logger.debug("%s was modified %f.", self.file, last_mod)
             return last_mod
-        logger.error("Cannot get timestamp for missing file %s", self.path)
         raise IOError("file '%s' does not exist! Cannot get modified time."
-                      % self.path)
+                      % self.file)
 
-    def touch(self):
-        if self.exists():
-            os.utime(self.path, None)
-        else:
-            file(self.path, 'w')
+    def touch(self, timestamp=None):
+        with open(self.file, 'a'):
+            os.utime(self.file, timestamp)
+
+    def open(self, mode='w'):
+        return open(self.file, mode)
 
 
 SETTINGS_FILE = 'creo_build.xml'
@@ -95,15 +122,15 @@ class ConfigEntry(Reference):
         self.config = config
         self.key = key
 
-    def set(self, key, value):
-        return self.config.set(key, value)
+    def set(self, value):
+        return self.config.set(self.key, value)
 
-    def get(self, key, default=None):
-        return self.config.get(key, default)
+    def get(self, default=None):
+        return self.config.get(self.key, default)
 
-    def last_modified(self, key):
-        last_mod = self.config.last_modified(key)
-        logger.debug("Config '%s' was modified %f.", key, last_mod)
+    def last_modified(self):
+        last_mod = self.config.last_modified(self.key)
+        logger.debug("Config '%s' was modified %f.", self.key, last_mod)
         return last_mod
 
     def exists(self):

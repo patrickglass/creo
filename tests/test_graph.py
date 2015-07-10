@@ -9,6 +9,10 @@ class TestNodes(unittest.TestCase):
     def test_node_init_name(self):
         self.assertEqual(Node('testname').name, 'testname')
 
+    def test_str(self):
+        n = Node('testname')
+        self.assertEqual(str(n), 'testname')
+
     # def test_node_add_input_by_name(self):
     #     n1 = Node('testname')
     #     n2 = Node('testname2')
@@ -35,7 +39,7 @@ class TestGraph(unittest.TestCase):
 
     def test_graph_get_node(self):
         self.g.add('firstnode')
-        node = self.g.get('firstnode')
+        self.g.get('firstnode')
         self.assertEqual(len(self.g.nodes), 1)
 
     def test_graph_create_node2(self):
@@ -49,6 +53,10 @@ class TestGraph(unittest.TestCase):
         self.g.add('firstnode')
         self.g.add('firstnode')
         self.assertEqual(len(self.g.nodes), 2)
+
+    def test_list(self):
+        self.g.add('firstnode')
+        self.assertEqual(self.g.list().keys(), ['firstnode'])
 
 
 class TestGraphScenario1(unittest.TestCase):

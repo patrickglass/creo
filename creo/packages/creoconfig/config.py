@@ -109,27 +109,27 @@ class Config(collections.MutableMapping):
         return self._store.last_modified(key)
 
     def __getitem__(self, key):
-        logger.debug("Config.__getitem__(%s)" % key)
+        # logger.debug("Config.__getitem__(%s)" % key)
         return self.get(key)
 
     def __getattr__(self, key):
         """__get_attr__ will raise the correct exception if key is not found"""
-        logger.debug("Config.__getattr__(%s)" % key)
+        # logger.debug("Config.__getattr__(%s)" % key)
         try:
             return self.get(key)
         except KeyError, msg:
             raise AttributeError(msg)
 
     def _set(self, key, value):
-        logger.debug("Config.set(%s, %s)" % (key, value))
+        # logger.debug("Config.set(%s, %s)" % (key, value))
         return self._store.set(key, str(value))
 
     def __setitem__(self, key, value):
-        logger.debug("Config.__setitem__(%s, %s)" % (key, value))
+        # logger.debug("Config.__setitem__(%s, %s)" % (key, value))
         return self._set(key, value)
 
     def __setattr__(self, key, value):
-        logger.debug("Config.__setattr__(%s, %s)" % (key, value))
+        # logger.debug("Config.__setattr__(%s, %s)" % (key, value))
         return self._set(key, value)
 
     def __iter__(self):

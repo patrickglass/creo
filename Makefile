@@ -3,7 +3,7 @@ default: test
 
 coverage: chmod_quick
 	# Run the test suite with coverage enabled
-	nosetests -v --with-coverage --cover-package creo --cover-inclusive --cover-branches
+	nosetests --with-coverage --cover-package creo --cover-branches
 
 test: chmod_quick
 	# Run the test suite
