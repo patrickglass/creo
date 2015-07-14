@@ -7,7 +7,10 @@ import logging
 
 import creo
 from creo.task_meta import TaskRegisterMemento
+import creo.messages
 
+
+creo.messages.DISABLE_COLOR = True
 # from creo import LocalFile
 
 
@@ -88,12 +91,13 @@ class TestTaskBuildFlowFile1(unittest.TestCase):
 
         self.default_cls = Step4
 
+    @unittest.skip("This needs to be figured out first.")
     def test_status(self):
         import creo.task_manager
 
         with mock.patch('creo.task_manager.logger') as m:
             runner = creo.TaskManager()
-            runner.status()
+            runner.status(self.default_cls)
 
         m.info.assert_has_calls(
             [
@@ -105,13 +109,47 @@ class TestTaskBuildFlowFile1(unittest.TestCase):
             ], any_order=True
         )
 
+    @unittest.skip("This needs to be figured out first.")
+    def test_status_with_touch(self):
+        import creo.task_manager
+
+        with mock.patch('creo.task_manager.logger') as m:
+            runner = creo.TaskManager()
+            runner.status(self.default_cls)
+
+        runner._target_to_instance('Step2_1').output().touch()
+
+        m.info.assert_has_calls(
+            [
+                mock.call("Task: 'Step1' is up to date!\n"),
+                mock.call("Task: 'Step2_1' is not up to date!\n"),
+                mock.call("Task: 'Step2_2' is up to date!\n"),
+                mock.call("Task: 'Step3' is up to date!\n"),
+                mock.call("Task: 'Step4' is up to date!\n"),
+            ], any_order=True
+        )
+
+    def test_clean(self):
+        runner = creo.TaskManager()
+
+        logging.info('*'*79)
+        logging.info("Printing out Pipeline Status.")
+        runner.clean('Step4')
+
+    def test_force(self):
+        runner = creo.TaskManager()
+
+        logging.info('*'*79)
+        logging.info("Printing out Pipeline Status.")
+        runner.force('Step2_2')
+
     def test_build(self):
 
         runner = creo.TaskManager()
 
         logging.info('*'*79)
         logging.info("Printing out Pipeline Status.")
-        runner.status()
+        runner.status(self.default_cls)
 
         # Update the first task and ensure other tasks invalidated
         logging.info('*'*79)
@@ -126,7 +164,7 @@ class TestTaskBuildFlowFile1(unittest.TestCase):
         runner.run(self.default_cls)
         # Check that the files were updates as expected
 
-        print "\nPrinting out refenence file timestamps..."
+        print "\nPrinting out reference file timestamps..."
         print LocalFile("mark.txt")
         print LocalFile("step1.txt")
         print LocalFile("step2_1.txt")

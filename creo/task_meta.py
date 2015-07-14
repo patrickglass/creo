@@ -26,12 +26,13 @@ class TaskRegisterMemento(type):
         """
         if not hasattr(self, 'class_register'):
             self.class_register = {}
+        else:
+            # We only add subclasses and not the base class
+            self.class_register[name] = self
 
         # Create the class dictionary for storing instances
         if not hasattr(self, 'instance_cache'):
             self.instance_cache = {}
-
-        self.class_register[name] = self
 
         super(TaskRegisterMemento, self).__init__(name, bases, attrs)
 
@@ -70,3 +71,7 @@ class TaskRegisterMemento(type):
 
     def class_by_name(self, task_class_name):
         return self.class_register[task_class_name]
+
+    def clear(self):
+        self.instance_cache = {}
+        self.class_register = {}

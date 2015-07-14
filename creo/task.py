@@ -9,13 +9,11 @@ Module task
 This software is used for flow development and execution of pipelines
 """
 import logging
-import weakref
 import warnings
 
-
-# from .memento import MementoMetaclass
 from .task_meta import TaskRegisterMemento
 from .task_state import PENDING, CHECK, RUNABLE, RUNNING, SUCCESS, FAILED, DISABLED
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +24,6 @@ class Task(object):
     # This allows multiple instation in `requires` which reference the
     # save instance.
     __metaclass__ = TaskRegisterMemento
-
-    # Stores all object instances so they can be iterated over later.
-    # we have used a weakref to allow Tasks to be deleted. Must now
-    # handle the case when the ref has been gargbage collected.
-    instances = weakref.WeakSet()
 
     # We want to be able to comare base on outputs existsing and
     # timestamp comparison of inputs vs outputs
@@ -47,12 +40,10 @@ class Task(object):
             raise NotImplementedError(
                 "Tasks do not support passing in position arguments yet. You "
                 "must only use named arguments!")
+
         # Each parameter which is passed into this Task is set as an attribute
         for k, v in kwargs.items():
             setattr(self, k, v)
-
-        # Add a weak refence to this instance
-        self.instances.add(self)
 
     def depends(self):
         return []
@@ -90,7 +81,7 @@ class Task(object):
         inputs = list(self.inputs())
         # logger.debug("Task: %r outputs: %s", self.name, outputs)
         if len(outputs) == 0:
-            warnings.warn(
+            raise RuntimeError(
                 "Task %r without outputs has no custom complete() method" % self
             )
             return False
@@ -126,25 +117,23 @@ class Task(object):
                 # or the Config entry did not exist and so we also have to run.
                 return False
 
-    def status(self):
-        """Print out the Task object in a pretty format"""
-        s = "Task: '%s'" % self.name
-        is_complete = self.complete()
-        if not is_complete:
-            s += " needs to be run!\n"
-            s += '  Inputs:\n'
-            for i in self.inputs():
-                s += "    %s\n" % i.to_string(True)
-            s += '  Outputs:\n'
-            for i in self.outputs():
-                s += "    %s\n" % i.to_string(True)
-        else:
-            s += " is up to date!\n"
-        return s
-
     def __repr__(self):
         return "%s(%r)" % (self.name, self.__dict__)
 
     def __str__(self):
         """Print out the Task object in a pretty format"""
-        return self.status()
+        s = "Task: '%s'" % self.name
+
+        if not self.complete():
+            s += " needs to be run!\n"
+        else:
+            s += " is up to date!\n"
+
+        s += '  Inputs:\n'
+        for i in self.inputs():
+            s += "    %s\n" % i.to_string(True)
+        s += '  Outputs:\n'
+        for i in self.outputs():
+            s += "    %s\n" % i.to_string(True)
+
+        return s

@@ -6,6 +6,8 @@ import creo
 class TaskManagerTestCase(unittest.TestCase):
 
     def setUp(self):
+        creo.Task.clear()
+
         class BaseObj(creo.Task):
             def outputs(self):
                 return ['a']
@@ -14,16 +16,20 @@ class TaskManagerTestCase(unittest.TestCase):
             pass
 
         class SubObj2(BaseObj):
-            pass
+            def depends(self):
+                return [SubObj1()]
 
         class SubObj3(BaseObj):
-            pass
+            def depends(self):
+                return [SubObj1()]
 
         class SubObj3_1(SubObj3):
-            pass
+            def depends(self):
+                return [SubObj1()]
 
         class SubObj4(BaseObj):
-            pass
+            def depends(self):
+                return [SubObj1()]
 
         self.target_cls = SubObj3_1
         self.runner = creo.TaskManager()
@@ -69,10 +75,13 @@ class TaskManagerTestCase(unittest.TestCase):
         self.assertTrue(orig is o2)
         self.assertTrue(orig is o3)
 
+    @unittest.skip("Discovery of target is not supported yet!")
     def test_get_tasks_no_target(self):
 
         tasks = self.runner._get_tasks(None)
-        self.assertEqual(
+        print("Tasks: %s" % tasks)
+        print("Tasks Names: %s" % list([x.name for x in tasks]))
+        self.assertItemsEqual(
             [x.name for x in tasks],
             [
                 'BaseObj',
@@ -85,14 +94,12 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_get_tasks_target(self):
 
-        tasks = self.runner._get_tasks('SubObj2')
-        self.assertEqual(
+        tasks = list(self.runner._get_tasks('SubObj2'))
+        print("Tasks: %s" % tasks)
+        print("Tasks Names: %s" % [x.name for x in tasks])
+        self.assertItemsEqual(
             [x.name for x in tasks],
             [
-                'BaseObj',
                 'SubObj1',
                 'SubObj2',
-                'SubObj3',
-                'SubObj3_1',
-                'SubObj4'
             ])

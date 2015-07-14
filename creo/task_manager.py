@@ -17,9 +17,11 @@ import types
 
 from task import Task
 from .task_state import PENDING, CHECK, RUNABLE, RUNNING, SUCCESS, FAILED, DISABLED
+from .messages import Message, red, green, blue, yellow, magenta, cyan
 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logger = Message(__name__)
 
 
 class Worker(object):
@@ -74,7 +76,17 @@ class TaskManager(object):
         if target:
             return TaskManager.all_deps(self._target_to_instance(target))
         else:
+            warnings.warn(
+                "You must specify the target. Discovery is not supported yet",
+                DeprecationWarning
+            )
+            # Get all defined classes and instantiate them.
+            # Then grab and return all instances.
+            for task_cls in self.base_class.classes.values():
+                task_cls()
+
             return self.base_class.instances.values()
+            # return self.base_class.classes.values()
 
     # def add(self, target):
     #     logger.debug("Adding target %s to pool." % target)
@@ -87,13 +99,45 @@ class TaskManager(object):
     def status(self, target=None):
         tasks = self._get_tasks(target)
         for task in tasks:
-            logger.info(task.status())
+            try:
+                s = "Task: " + green("'%s'" % task.name)
+                is_complete = task.complete()
+                if not is_complete:
+                    s += " needs to be run!\n"
+                    s += yellow('  Inputs:\n')
+                    for i in task.inputs():
+                        s += cyan("    %s\n" % i.to_string(True))
+                    s += yellow('  Outputs:\n')
+                    for i in task.outputs():
+                        s += cyan("    %s\n" % i.to_string(True))
+                else:
+                    s += " is up to date!"
+                logger.info(s)
+            except NotImplementedError:
+                logger.info("%s is not implemented correctly. Skipping..." % task.name)
 
-    def clean(self, level=0, target=None):
+    def clean(self, target=None, level=0):
+        """Clean iterates through all outputs and will call remove() on it if
+        the level of the file is lower than specified. This allows you to
+        have different levels of clean.
+        """
         tasks = self._get_tasks(target)
+        # go through each task and check the outputs
+        for task in tasks:
+            for output in task.outputs():
+                if output.level <= level:
+                    logging.info("Removing: %s", output)
+                else:
+                    logging.debug("Preserving: %s", output)
 
     def force(self, target=None):
-        tasks = self._get_tasks(target)
+        """Will force all outputs of specified target to be up to date. This
+        will have the same effect as `touch`ing the output files.
+        """
+        task = self._target_to_instance(target)
+        logging.info("Forcing '%s' to be updated!", task)
+        for output in task.outputs():
+            logging.debug("Force Update: %s", output)
 
     def run_new_state(self):
         for target in self.targets:
@@ -118,19 +162,20 @@ class TaskManager(object):
                 result = self.worker_results[task.name]
                 is_complete = task.complete()
                 if not result:
-                    logging.error(
+                    logging.warn(
                         "%s failed with return code: %s",
                         task.name, result)
                     task.state == FAILED
                 elif not is_complete():
-                    logging.fatal(
+                    task.state == FAILED
+                    logging.error(
+                        RuntimeError,
                         "%s failed complete() task check. This should "
                         "never occur since the task should be able to "
                         "determine success without relying on job return "
                         "code. Please report this error!",
                         task.name)
-                    task.state == FAILED
-                    raise RuntimeError()
+                    # raise RuntimeError()
                 else:
                     logging.debug(
                         "%s completed successfully!", task.name)
@@ -175,4 +220,6 @@ class TaskManager(object):
                 logger.error("*** '%s' FAILED", task.name)
                 print(task)
                 task.state = FAILED
-                raise RuntimeError("exiting build flow since step failed!")
+                raise RuntimeError(
+                    "Task '%s' failed to run or had bad exit code. "
+                    "Exiting run...", task)

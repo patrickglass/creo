@@ -20,7 +20,7 @@ class ReferenceTestCase(unittest.TestCase):
 
     def test_repr(self):
         t = Reference()
-        self.assertEqual(repr(t), "Reference({})")
+        self.assertEqual(repr(t), "Reference({'level': 0})")
 
 
 class ReferenceLastModfifiedTestCase(unittest.TestCase):

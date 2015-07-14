@@ -22,11 +22,20 @@ logger = logging.getLogger(__name__)
 @functools.total_ordering
 class Reference(object):
 
+    def __init__(self, level=0):
+        self.level = level
+
     def exists(self):
         raise NotImplementedError()
 
+    def remove(self):
+        raise NotImplementedError(
+            "Remove is called by TaskManager.clean() and is used to cleanup "
+            "the working directory. Each `Reference` can declare its own "
+            "level which allows fine grain control of what to remove.")
+
     def last_modified(self):
-        msg = """You cannot use %s classes in Tasks which compare by
+        msg = """You cannot use %s class in Tasks which compare by
         last_modified timestamps.""" % self.__class__
         logger.error(msg)
         raise NotImplementedError(msg)
@@ -49,7 +58,8 @@ class Reference(object):
 
 class LocalDirectory(Reference):
 
-    def __init__(self, path, create=False):
+    def __init__(self, path, create=False, level=0):
+        super(LocalDirectory, self).__init__(level)
         self.file = path
         self.directory = os.path.realpath(path)
         if create:
@@ -90,7 +100,8 @@ class LocalDirectory(Reference):
 
 class LocalFile(LocalDirectory):
 
-    def __init__(self, filename, create=True):
+    def __init__(self, filename, create=True, level=0):
+        super(LocalFile, self).__init__(level)
         self.file = filename
         self.directory = os.path.dirname(os.path.realpath(filename))
         if create:
@@ -118,7 +129,8 @@ env = creoconfig.Config(SETTINGS_FILE)
 
 class ConfigEntry(Reference):
 
-    def __init__(self, key, config=env):
+    def __init__(self, key, config=env, level=0):
+        super(ConfigEntry, self).__init__(level)
         self.config = config
         self.key = key
 
