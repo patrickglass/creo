@@ -17,7 +17,7 @@ import types
 
 from task import Task
 from .task_state import PENDING, CHECK, RUNABLE, RUNNING, SUCCESS, FAILED, DISABLED
-from .messages import Message, red, green, blue, yellow, magenta, cyan
+from .message import Message, red, green, blue, yellow, magenta, cyan
 
 
 # logger = logging.getLogger(__name__)
